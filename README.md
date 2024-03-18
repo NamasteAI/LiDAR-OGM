@@ -1,1 +1,1 @@
-# LiDAR-OGM
+# constructing a 2D occupancy grid based on a laser sensor attached to the mobile base of the D12 robot. For this experiment, a Laser Imaging Detection and Ranging (LiDAR) sensor was used to generate and map an occupancy grid. 
