@@ -1,0 +1,86 @@
+function onTrackOccupancy(app,callback)
+    
+    global cycleCache
+    
+    if(isempty(app.OccupancyGrid))
+        app.OccupancyGrid = zeros(10,10);
+    end
+
+    function setGridColour(x,y, confidence)
+
+        if(app.OccupancyGrid(x,y) >= 0.8)
+            app.OccupancyGrid(x,y) = 0.8;
+            return
+        end
+        app.OccupancyGrid(x,y) = confidence;
+
+    end
+
+    function setGrid(locX,locY)
+        
+        setGridColour(locX,locY,0.8);
+
+        if( locX > 1 && locX < 10 && ...
+            locY > 1 && locY < 10)
+
+            setGridColour(locX,locY-1,0.32);
+            setGridColour(locX-1,locY,0.32)
+            setGridColour(locX-1,locY-1,0.32);
+
+            setGridColour(locX,locY+1,0.32);
+            setGridColour(locX+1,locY,0.32);
+            setGridColour(locX+1,locY+1,0.32);
+            
+            setGridColour(locX-1,locY+1,0.32);
+            setGridColour(locX+1,locY-1,0.32);
+
+        end
+    end
+
+    
+    function CheckCurrentLocation(timer,~)
+        if(app.IsOccupancyRunning)
+            [~,dst_1_1] = app.Simulator.simxGetFloatSignal(app.ClientId,'DISTANCE_1_1', app.Simulator.simx_opmode_streaming);
+            [~,dst_5_5] = app.Simulator.simxGetFloatSignal(app.ClientId,'DISTANCE_5_5', app.Simulator.simx_opmode_streaming);
+            [~,dst_2_10] = app.Simulator.simxGetFloatSignal(app.ClientId,'DISTANCE_2_10', app.Simulator.simx_opmode_streaming);
+    
+            if(dst_1_1 > 0)
+                
+                loc = onLocate(dst_1_1,dst_5_5,dst_2_10,app.CurrentLocation);
+                if(~isempty(app.CurrentLocation))
+                    if(abs(app.CurrentLocation(2) - loc(2))
+                    if(abs(app.CurrentLocation(2) - loc(2)))
+
+                    end
+
+                end
+
+                % solver is a noisy-sign generator - remove any negative numbers
+                locX = abs(int32(loc(1))) 
+                locY = abs(int32(loc(2)));
+                                
+                % Protect the index array base of 1 ... like a sith on crack
+                locX  = int32((locX >= 1)) * locX + int32(~(locX >= 1)) * 1;
+                locY  = int32((locY >= 1)) * locY + int32(~(locY >= 1)) * 1;
+                setGrid(locX,locY);
+            end
+            fireCallback(callback,app);
+        end
+    end
+
+    if(isempty(app.OccupancyTimer))
+        app.OccupancyTimer  = timer;
+        app.OccupancyTimer.TimerFcn = @CheckCurrentLocation;
+        app.OccupancyTimer.Period = 0.25;
+        app.OccupancyTimer.ExecutionMode = 'fixedRate';
+    end
+
+    app.IsOccupancyRunning = ~app.IsOccupancyRunning;
+
+    if(app.IsOccupancyRunning)
+        start(app.OccupancyTimer)
+    else
+        stop(app.OccupancyTimer)
+        fireCallback(callback,app);
+    end
+end
